@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مقص وصانع أفلام الأكاديمية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f0f9ff; }
+        .drop-zone { border: 4px dashed #3b82f6; transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .drop-zone:hover { background-color: #e0f2fe; border-color: #2563eb; transform: scale(1.01); }
+        .preview-grid { display: grid; gap: 15px; margin-top: 20px; }
+        .card-anim { animation: fadeInUp 0.5s ease forwards; opacity: 0; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #video-preview-canvas { max-width: 100%; border-radius: 1.5rem; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <div class="inline-block bg-blue-600 text-white px-6 py-2 rounded-full font-bold text-sm mb-4 shadow-lg shadow-blue-200">
+                أكاديمية الأستاذ مصطفى عبد العال دحروج
+            </div>
+            <h1 class="text-4xl font-black text-blue-900 mb-2 italic">🎬 صانع أفلام الأكاديمية</h1>
+            <p class="text-gray-600 font-bold">قطع اللوحات وحولها إلى فيديو بضغطة واحدة!</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Side: Controls -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Drop Area -->
+                <div id="drop-area" class="drop-zone bg-white rounded-[2.5rem] p-8 text-center cursor-pointer shadow-xl border-4 border-blue-400">
+                    <div class="text-6xl mb-4">🖼️</div>
+                    <p class="text-lg font-black text-blue-800">اسحب لوحة القصة هنا</p>
+                    <input type="file" id="file-input" class="hidden" accept="image/*">
+                </div>
+
+                <!-- Settings Card -->
+                <div id="settings" class="hidden bg-white p-8 rounded-[2.5rem] shadow-xl border-b-8 border-blue-500 card-anim">
+                    <h3 class="font-black text-blue-900 mb-6 flex items-center gap-2">
+                        <span class="bg-blue-100 p-2 rounded-lg">⚙️</span> إعدادات الإنتاج
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block font-bold text-gray-600 mb-2 text-xs text-center">الأعمدة</label>
+                                <input type="number" id="cols" value="2" min="1" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-center font-bold">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-gray-600 mb-2 text-xs text-center">الصفوف</label>
+                                <input type="number" id="rows" value="4" min="1" class="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl text-center font-bold">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-gray-600 mb-2 text-xs text-center">سرعة العرض (ثواني/صورة)</label>
+                            <input type="range" id="frame-duration" min="1" max="5" value="2" class="w-full">
+                            <div class="flex justify-between text-[10px] font-bold text-blue-500 mt-1"><span>سريع</span><span>هادئ</span></div>
+                        </div>
+                    </div>
+                    <button onclick="processAndPlay()" class="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl text-lg shadow-lg shadow-orange-200 transition-all active:scale-95">
+                        صناعة الفيديو 🎬
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Side: Player & Results -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Video Player Area -->
+                <div id="player-area" class="hidden bg-slate-900 p-4 rounded-[3rem] shadow-2xl relative overflow-hidden border-8 border-white">
+                    <div class="absolute top-4 left-4 z-20">
+                        <span class="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-black">جاري العرض السينمائي</span>
+                    </div>
+                    <canvas id="video-preview-canvas" class="mx-auto"></canvas>
+                    <div class="mt-4 flex justify-center gap-4">
+                        <button onclick="playMovie()" class="bg-white/20 hover:bg-white/30 text-white p-3 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Split Results -->
+                <div id="placeholder-msg" class="h-64 border-4 border-dashed border-slate-200 rounded-[3rem] flex items-center justify-center text-slate-300 flex-col p-10">
+                    <div class="text-6xl mb-4">✨</div>
+                    <p class="text-lg font-black italic text-center">ارفع لوحة القصة لنحولها إلى فيلم للأطفال!</p>
+                </div>
+
+                <div id="result-area" class="hidden">
+                    <div class="bg-blue-900 text-white p-6 rounded-t-[2.5rem] flex justify-between items-center shadow-lg">
+                        <h3 class="text-xl font-black italic">المشاهد المقطوعة 🎉</h3>
+                        <button onclick="downloadAll()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl font-black text-sm transition-transform active:scale-95">حفظ الصور</button>
+                    </div>
+                    <div id="image-grid" class="bg-white p-6 rounded-b-[2.5rem] shadow-xl preview-grid grid-cols-2 md:grid-cols-4 max-h-[40vh] overflow-y-auto border-4 border-slate-50">
+                        <!-- Images -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="split-canvas" class="hidden"></canvas>
+
+    <script>
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('file-input');
+        const settings = document.getElementById('settings');
+        const imageGrid = document.getElementById('image-grid');
+        const resultArea = document.getElementById('result-area');
+        const playerArea = document.getElementById('player-area');
+        const placeholder = document.getElementById('placeholder-msg');
+        const videoCanvas = document.getElementById('video-preview-canvas');
+        const vCtx = videoCanvas.getContext('2d');
+        
+        let sourceImage = new Image();
+        let frames = [];
+        let isPlaying = false;
+        let playInterval;
+
+        dropArea.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+        function handleFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                sourceImage.src = e.target.result;
+                sourceImage.onload = () => {
+                    settings.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                    dropArea.innerHTML = `<img src="${sourceImage.src}" class="max-h-48 mx-auto rounded-2xl shadow-lg border-2 border-blue-200">`;
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function processAndPlay() {
+            const cols = parseInt(document.getElementById('cols').value) || 1;
+            const rows = parseInt(document.getElementById('rows').value) || 1;
+            const splitCanvas = document.getElementById('split-canvas');
+            const sCtx = splitCanvas.getContext('2d');
+
+            frames = [];
+            imageGrid.innerHTML = '';
+            
+            const pW = sourceImage.width / cols;
+            const pH = sourceImage.height / rows;
+            splitCanvas.width = pW;
+            splitCanvas.height = pH;
+            videoCanvas.width = pW;
+            videoCanvas.height = pH;
+
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    sCtx.clearRect(0, 0, pW, pH);
+                    sCtx.drawImage(sourceImage, x*pW, y*pH, pW, pH, 0, 0, pW, pH);
+                    
+                    const url = splitCanvas.toDataURL('image/png');
+                    const frameImg = new Image();
+                    frameImg.src = url;
+                    frames.push(frameImg);
+
+                    const div = document.createElement('div');
+                    div.className = 'bg-slate-50 p-2 rounded-2xl border border-slate-100 card-anim';
+                    div.innerHTML = `<img src="${url}" class="w-full rounded-xl mb-1 shadow-sm"><a href="${url}" download="frame_${frames.length}.png" class="text-[10px] text-blue-500 font-bold block text-center">تحميل</a>`;
+                    imageGrid.appendChild(div);
+                }
+            }
+
+            resultArea.classList.remove('hidden');
+            playerArea.classList.remove('hidden');
+            playMovie();
+            window.scrollTo({ top: playerArea.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        function playMovie() {
+            if (frames.length === 0) return;
+            clearInterval(playInterval);
+            let currentFrame = 0;
+            const duration = parseInt(document.getElementById('frame-duration').value) * 1000;
+
+            const nextFrame = () => {
+                vCtx.fillStyle = '#000';
+                vCtx.fillRect(0,0, videoCanvas.width, videoCanvas.height);
+                
+                // Drawing with a small fade-in effect simulation
+                vCtx.globalAlpha = 0;
+                let opacity = 0;
+                const fadeIn = setInterval(() => {
+                    opacity += 0.1;
+                    vCtx.globalAlpha = opacity;
+                    vCtx.drawImage(frames[currentFrame], 0, 0);
+                    if (opacity >= 1) clearInterval(fadeIn);
+                }, 30);
+
+                currentFrame = (currentFrame + 1) % frames.length;
+            };
+
+            nextFrame();
+            playInterval = setInterval(nextFrame, duration);
+        }
+
+        function downloadAll() {
+            const links = imageGrid.querySelectorAll('a');
+            links.forEach((l, i) => setTimeout(() => l.click(), i * 300));
+        }
+    </script>
+</body>
+</html>
